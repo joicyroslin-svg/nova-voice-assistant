@@ -1,0 +1,28 @@
+# Environment and secrets
+.env
+.data/
+
+# Python caches
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Coverage and logs
+.coverage
+*.log
+
+# Local artifacts
+assistant_state.db
+*.jsonl
+*.db
+notes.txt
+reminders.json
+tasks.json
+profile.json
+expenses.json
+habits.json
+history.jsonl
+
+# OS junk
+.DS_Store
+Thumbs.db

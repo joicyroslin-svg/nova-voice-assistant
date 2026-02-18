@@ -1,0 +1,5 @@
+webrtcvad==2.0.10
+SpeechRecognition==3.10.4
+pyttsx3==2.99
+PyAudio==0.2.14
+pvporcupine==3.0.2
