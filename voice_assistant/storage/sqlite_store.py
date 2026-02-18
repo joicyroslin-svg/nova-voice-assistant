@@ -281,6 +281,15 @@ class SQLiteStore:
         lines = [f"{row['role']}: {row['text']}" for row in rows]
         return "Recent conversation: " + " | ".join(lines)
 
+    def history_entries(self, limit: int = 12) -> list[dict[str, str]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT role, text FROM history ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        rows = list(reversed(rows))
+        return [{"role": str(row["role"]), "text": str(row["text"])} for row in rows]
+
     def clear_history(self) -> str:
         with self._connect() as conn:
             conn.execute("DELETE FROM history")

@@ -10,9 +10,12 @@ A production-style Python voice assistant project you can showcase in your portf
 - Human-style conversation and emotional support replies
 - Multilingual phrase understanding (English + Telugu + Hindi + Spanish basics)
 - Personalized memory (remembers your name)
+- Short-term conversation memory for contextual replies
 - Save notes
 - Persistent reminders (saved to JSON)
 - Task manager with status tracking
+- LLM fallback with rate-limit handling and logged AI responses
+- Sentiment-aware, personalized replies
 - Safe calculator for quick math
 - Built-in translator (common phrases)
 - SQLite-backed persistent state (auto-migration from JSON on first run)
@@ -82,6 +85,13 @@ copy .env.example .env
 ```bash
 python app.py
 ```
+
+## LLM & Memory Options
+
+- `LLM_ENABLED=true` to allow LLM fallback for unknown intents.
+- `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES`, `LLM_BACKOFF_SECONDS` tune the model call and rate-limit backoff.
+- `MEMORY_MESSAGE_LIMIT` controls the short-term context window used in LLM prompts.
+- `AI_LOG_FILE` stores JSONL logs of every AI-generated reply (LLM + conversational fallback).
 
 ## Optional Phone Control (Android)
 

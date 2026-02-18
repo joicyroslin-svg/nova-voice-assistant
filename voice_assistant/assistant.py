@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime
 from pathlib import Path
 from voice_assistant.audio import Listener, Speaker
 from voice_assistant.config import Settings
@@ -23,7 +25,9 @@ from voice_assistant.skills.habits import (
     save_habits,
     show_habits_text,
 )
-from voice_assistant.skills.history import append_history, clear_history, history_text
+from voice_assistant.skills.history import append_history, clear_history, history_text, read_history
+from voice_assistant.skills.memory import MemoryManager
+from voice_assistant.skills.sentiment import detect_sentiment
 from voice_assistant.skills.llm import generate_llm_reply
 from voice_assistant.skills.math_tools import calculate_expression
 from voice_assistant.skills.notes import save_note
@@ -123,6 +127,10 @@ class VoiceAssistant:
             self.habits = load_habits(self.settings.habits_file)
             self.contacts = load_contacts(self.settings.contacts_file)
             self.events = load_events(self.settings.events_file)
+
+        self.memory = MemoryManager(self.settings.memory_message_limit)
+        self.memory.prime(self._recent_history_for_memory())
+        self.last_sentiment: str | None = None
         self.google_enabled = self.settings.google_sync_enabled
         self.last_action: dict[str, object] | None = None
         self.wake_word_enabled = self.settings.wake_word_enabled
@@ -130,6 +138,15 @@ class VoiceAssistant:
         self._awake = not self.wake_word_enabled
         if self.google_enabled and GOOGLE_LIBS_AVAILABLE and self.settings.google_auto_sync_minutes > 0:
             threading.Thread(target=self._google_auto_sync_loop, daemon=True).start()
+
+    def _recent_history_for_memory(self) -> list[dict[str, str]]:
+        if self.store:
+            try:
+                return self.store.history_entries(limit=self.settings.memory_message_limit)
+            except Exception:
+                self.logger.exception("Failed to read history from store for memory")
+                return []
+        return read_history(self.settings.history_file, limit=self.settings.memory_message_limit)
 
     def _append_history(self, role: str, text: str) -> None:
         try:
@@ -139,6 +156,31 @@ class VoiceAssistant:
                 append_history(self.settings.history_file, role, text)
         except Exception:
             self.logger.exception("Failed to append history")
+
+    def _log_ai_response(self, text: str, source: str) -> None:
+        payload = {
+            "ts": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            "source": source,
+            "text": text,
+        }
+        try:
+            log_path = Path(self.settings.ai_log_file)
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with log_path.open("a", encoding="utf-8") as fp:
+                fp.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            self.logger.info("AI response logged (%s)", source)
+        except Exception:
+            self.logger.exception("Failed to log AI response")
+
+    def _personalize_reply(self, text: str, sentiment: str | None = None) -> str:
+        name = self.profile.get("name")
+        prefix = f"{name}, " if name else ""
+        suffix = ""
+        if sentiment == "negative":
+            suffix = " I am here with you."
+        elif sentiment == "positive":
+            suffix = " Keep the momentum going."
+        return f"{prefix}{text}{suffix}".strip()
 
     def _google_auto_sync_loop(self) -> None:
         interval = max(1, self.settings.google_auto_sync_minutes) * 60
@@ -220,6 +262,7 @@ class VoiceAssistant:
         except Exception:
             self.logger.exception("Failed to speak response")
         self._append_history("assistant", text)
+        self.memory.append("assistant", text)
 
     def _get_command(self) -> str:
         try:
@@ -245,6 +288,9 @@ class VoiceAssistant:
     def _handle(self, command: str) -> bool:
         try:
             self._append_history("user", command)
+            self.memory.append("user", command)
+            sentiment = detect_sentiment(command)
+            self.last_sentiment = sentiment
             intent = parse_intent(command)
 
             if intent.intent_type == IntentType.EXIT:
@@ -739,12 +785,22 @@ class VoiceAssistant:
                     model=self.settings.llm_model,
                     base_url=self.settings.llm_base_url,
                     timeout_seconds=self.settings.llm_timeout_seconds,
+                    max_retries=self.settings.llm_max_retries,
+                    backoff_seconds=self.settings.llm_backoff_seconds,
+                    memory_context=self.memory.as_list(),
+                    user_name=self.profile.get("name"),
+                    sentiment=sentiment,
+                    logger=self.logger,
                 )
                 if llm_reply:
-                    self._say(llm_reply)
+                    personalized = self._personalize_reply(llm_reply, sentiment)
+                    self._log_ai_response(personalized, source="llm")
+                    self._say(personalized)
                     return True
 
-            self._say(get_friend_reply_text(command))
+            fallback = self._personalize_reply(get_friend_reply_text(command), sentiment)
+            self._log_ai_response(fallback, source="fallback")
+            self._say(fallback)
             return True
         except Exception:
             self.logger.exception("Unhandled error while processing command")
