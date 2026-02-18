@@ -50,12 +50,7 @@ class Listener:
         self.vad = webrtcvad.Vad(2) if self.use_vad else None
         self.wake_word = wake_word
         self._porcupine = None
-        if wake_word and pvporcupine is not None:
-            keyword = wake_word.lower()
-            if keyword == "nova":
-                self._porcupine = pvporcupine.create(keywords=["alexa"])  # using built-in as placeholder
-            else:
-                self._porcupine = None
+        self._porcupine_stream = None
 
     def listen(self, timeout: float = 2.0, phrase_time_limit: float = 5.0) -> str | None:
         if self.recognizer is None or sr is None:

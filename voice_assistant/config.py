@@ -56,3 +56,5 @@ class Settings:
     google_auto_sync_minutes: int = int(os.getenv("GOOGLE_AUTO_SYNC_MINUTES", "0"))
     wake_word_enabled: bool = _to_bool(os.getenv("WAKE_WORD_ENABLED", "false"))
     wake_word: str = os.getenv("WAKE_WORD", "nova")
+    porcupine_keyword_file: str = os.getenv("PORCUPINE_KEYWORD_FILE", "")
+    porcupine_access_key: str = os.getenv("PORCUPINE_ACCESS_KEY", "")
