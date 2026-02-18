@@ -1,4 +1,4 @@
-# Voice Assistant AI (Portfolio Project) ![CI](https://github.com/joicyroslin-svg/nova-voice-assisstant-ai/actions/workflows/ci.yml/badge.svg) ![Coverage](coverage.svg)
+# Voice Assistant AI (Portfolio Project) ![CI](https://github.com/joicyroslin-svg/nova-voice-assisstant-ai/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/joicyroslin-svg/nova-voice-assistant/branch/main/graph/badge.svg)](https://codecov.io/gh/joicyroslin-svg/nova-voice-assistant)
 
 A production-style Python voice assistant project you can showcase in your portfolio and discuss in interviews.
 

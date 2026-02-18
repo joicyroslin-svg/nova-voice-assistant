@@ -28,4 +28,10 @@ jobs:
 
       - name: Run tests with coverage gate
         run: |
-          pytest -q --cov=voice_assistant --cov-report=term-missing --cov-fail-under=40
+          pytest -q --cov=voice_assistant --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=40
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
